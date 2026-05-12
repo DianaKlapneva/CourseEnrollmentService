@@ -9,7 +9,7 @@
 
 ## Порядок действий при запуске проекта
 1. Необходимые зависимости:  flask flask_cors graphene psycopg2-binary
-2. База данных education_db и таблицы (SQL в pgAdmin)
+2. База данных education_db и таблицы students, courses, enrollments - на SQL в pgAdmin
 3. Запускаем сервисы в 4 отдельных терминалах
 4. Открываем файл frontend.html в браузере
 
