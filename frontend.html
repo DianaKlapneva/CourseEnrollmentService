@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GraphQL Microservices Demo - Full CRUD</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        h1 { text-align: center; color: #333; }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+        .service { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 350px; }
+        h2 { color: #333; margin-top: 0; border-bottom: 2px solid #4caf50; padding-bottom: 5px; }
+        h3 { color: #666; margin-top: 15px; margin-bottom: 5px; font-size: 14px; }
+        input, select { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { background: #4caf50; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; margin: 5px 2px; font-size: 12px; }
+        button:hover { background: #45a049; }
+        .delete-btn { background: #f44336; }
+        .delete-btn:hover { background: #da190b; }
+        .update-btn { background: #ff9800; }
+        .update-btn:hover { background: #e68900; }
+        .get-btn { background: #2196f3; }
+        .get-btn:hover { background: #0b7dda; }
+        .result { background: #f0f0f0; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 11px; margin-top: 10px; white-space: pre-wrap; word-wrap: break-word; max-height: 200px; overflow-y: auto; }
+        .record { background: #e8f5e9; padding: 5px; margin: 5px 0; border-radius: 3px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .record-actions button { margin-left: 5px; padding: 2px 6px; font-size: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Запись на курсы </h1>
+    <div class="container">
+
+        <div class="service">
+            <h2>📚 Студенты</h2>
+            <h3>Добавить студента</h3>
+            <input type="text" id="stuFirstName" placeholder="Имя">
+            <input type="text" id="stuLastName" placeholder="Фамилия">
+            <input type="email" id="stuEmail" placeholder="Email">
+            <button onclick="createStudent()">➕ Добавить</button>
+            
+            <h3>Update Student</h3>
+            <input type="number" id="updateStuId" placeholder="ID студента">
+            <input type="text" id="updateStuFirstName" placeholder="Изменить имя (опционально)">
+            <input type="text" id="updateStuLastName" placeholder="Изменить фамилию (опционально)">
+            <input type="email" id="updateStuEmail" placeholder="Изменить email (опционально)">
+            <button class="update-btn" onclick="updateStudent()">✏️ Изменить</button>
+            
+            <h3>Delete Student</h3>
+            <input type="number" id="deleteStuId" placeholder="ID студента">
+            <button class="delete-btn" onclick="deleteStudent()">🗑️ Удалить</button>
+            
+            <button class="get-btn" onclick="getStudents()">📋 Список студентов</button>
+            <div id="studentsResult" class="result">Вывод данных</div>
+        </div>
+
+   
+        <div class="service">
+            <h2>📖 Курсы</h2>
+            <h3>Добавить курс</h3>
+            <input type="text" id="courseTitle" placeholder="Название">
+            <input type="number" id="courseCredits" placeholder="Всего баллов">
+            <input type="text" id="courseTeacher" placeholder="Преподаватель">
+            <button onclick="createCourse()">➕ Добавить</button>
+            
+            <h3>Update Course</h3>
+            <input type="number" id="updateCourseId" placeholder="ID курса">
+            <input type="text" id="updateCourseTitle" placeholder="Изменить название (опционально)">
+            <input type="number" id="updateCourseCredits" placeholder="Изменить кол-во баллов (опционально)>
+            <input type="text" id="updateCourseTeacher" placeholder="Изменить преподавателя (опционально)">
+            <button class="update-btn" onclick="updateCourse()">✏️ Изменить</button>
+            
+            <h3>Delete Course</h3>
+            <input type="number" id="deleteCourseId" placeholder="ID курса">
+            <button class="delete-btn" onclick="deleteCourse()">🗑️ Удалить</button>
+            
+            <button class="get-btn" onclick="getCourses()">📋 Список курсов</button>
+            <div id="coursesResult" class="result">Вывод данных</div>
+        </div>
+
+
+        <div class="service">
+            <h2>📝 Зачисление на курс</h2>
+            <h3>Create Enrollment</h3>
+            <input type="number" id="enrollStudentId" placeholder="ID студента">
+            <input type="number" id="enrollCourseId" placeholder="ID курса">
+            <button onclick="createEnrollment()">➕ Добавить</button>
+            
+            <h3>Изменить статус зачисления</h3>
+            <input type="number" id="updateEnrollId" placeholder="ID зачисления">
+            <select id="updateEnrollStatus">
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="dropped">Dropped</option>
+            </select>
+            <button class="update-btn" onclick="updateEnrollment()">✏️ Изменить</button>
+            
+            <h3>Delete Enrollment</h3>
+            <input type="number" id="deleteEnrollId" placeholder="ID зачисления">
+            <button class="delete-btn" onclick="deleteEnrollment()">🗑️ Удалить</button>
+            
+            <button class="get-btn" onclick="getEnrollments()">📋 Список зачислений</button>
+            <div id="enrollmentsResult" class="result">Вывод данных</div>
+        </div>
+    </div>
+
+    <script>
+
+        const STUDENTS_URL = 'http://localhost:5001/graphql';
+        const COURSES_URL = 'http://localhost:5002/graphql';
+        const ENROLLMENTS_URL = 'http://localhost:5003/graphql';
+
+
+        async function createStudent() {
+            const firstName = document.getElementById('stuFirstName').value;
+            const lastName = document.getElementById('stuLastName').value;
+            const email = document.getElementById('stuEmail').value;
+            
+            const query = `mutation {
+                createStudent(firstName: "${firstName}", lastName: "${lastName}", email: "${email}") {
+                    student { id firstName lastName email }
+                }
+            }`;
+            
+            const response = await fetch(STUDENTS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('studentsResult').innerHTML = JSON.stringify(result, null, 2);
+            if (result.data) getStudents();
+        }
+
+        async function updateStudent() {
+            const id = document.getElementById('updateStuId').value;
+            const firstName = document.getElementById('updateStuFirstName').value;
+            const lastName = document.getElementById('updateStuLastName').value;
+            const email = document.getElementById('updateStuEmail').value;
+            
+            let updates = '';
+            if (firstName) updates += `firstName: "${firstName}", `;
+            if (lastName) updates += `lastName: "${lastName}", `;
+            if (email) updates += `email: "${email}", `;
+            updates = updates.slice(0, -2);
+            
+            const query = `mutation {
+                updateStudent(id: "${id}", ${updates}) {
+                    student { id firstName lastName email }
+                }
+            }`;
+            
+            const response = await fetch(STUDENTS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('studentsResult').innerHTML = JSON.stringify(result, null, 2);
+            if (result.data) getStudents();
+        }
+
+        async function deleteStudent() {
+            const id = document.getElementById('deleteStuId').value;
+            
+            const query = `mutation {
+                deleteStudent(id: "${id}") { success }
+            }`;
+            
+            const response = await fetch(STUDENTS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('studentsResult').innerHTML = JSON.stringify(result, null, 2);
+            getStudents();
+        }
+
+        async function getStudents() {
+            const query = `{ students { id firstName lastName email } }`;
+            const response = await fetch(STUDENTS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('studentsResult').innerHTML = JSON.stringify(result, null, 2);
+        }
+
+
+        async function createCourse() {
+            const title = document.getElementById('courseTitle').value;
+            const credits = parseInt(document.getElementById('courseCredits').value);
+            const teacher = document.getElementById('courseTeacher').value;
+            
+            const query = `mutation {
+                createCourse(title: "${title}", credits: ${credits}, teacher: "${teacher}") {
+                    course { id title credits teacher }
+                }
+            }`;
+            
+            const response = await fetch(COURSES_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('coursesResult').innerHTML = JSON.stringify(result, null, 2);
+            if (result.data) getCourses();
+        }
+
+        async function updateCourse() {
+            const id = document.getElementById('updateCourseId').value;
+            const title = document.getElementById('updateCourseTitle').value;
+            const credits = document.getElementById('updateCourseCredits').value;
+            const teacher = document.getElementById('updateCourseTeacher').value;
+            
+            let updates = '';
+            if (title) updates += `title: "${title}", `;
+            if (credits) updates += `credits: ${credits}, `;
+            if (teacher) updates += `teacher: "${teacher}", `;
+            updates = updates.slice(0, -2);
+            
+            const query = `mutation {
+                updateCourse(id: "${id}", ${updates}) {
+                    course { id title credits teacher }
+                }
+            }`;
+            
+            const response = await fetch(COURSES_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('coursesResult').innerHTML = JSON.stringify(result, null, 2);
+            if (result.data) getCourses();
+        }
+
+        async function deleteCourse() {
+            const id = document.getElementById('deleteCourseId').value;
+            
+            const query = `mutation {
+                deleteCourse(id: "${id}") { success }
+            }`;
+            
+            const response = await fetch(COURSES_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('coursesResult').innerHTML = JSON.stringify(result, null, 2);
+            getCourses();
+        }
+
+        async function getCourses() {
+            const query = `{ courses { id title credits teacher } }`;
+            const response = await fetch(COURSES_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('coursesResult').innerHTML = JSON.stringify(result, null, 2);
+        }
+
+        async function createEnrollment() {
+            const studentId = parseInt(document.getElementById('enrollStudentId').value);
+            const courseId = parseInt(document.getElementById('enrollCourseId').value);
+            
+            const query = `mutation {
+                createEnrollment(studentId: ${studentId}, courseId: ${courseId}) {
+                    enrollment { id studentId courseId status }
+                }
+            }`;
+            
+            const response = await fetch(ENROLLMENTS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('enrollmentsResult').innerHTML = JSON.stringify(result, null, 2);
+            if (result.data) getEnrollments();
+        }
+
+        async function updateEnrollment() {
+            const id = document.getElementById('updateEnrollId').value;
+            const status = document.getElementById('updateEnrollStatus').value;
+            
+            const query = `mutation {
+                updateEnrollment(id: "${id}", status: "${status}") {
+                    enrollment { id studentId courseId status }
+                }
+            }`;
+            
+            const response = await fetch(ENROLLMENTS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('enrollmentsResult').innerHTML = JSON.stringify(result, null, 2);
+            if (result.data) getEnrollments();
+        }
+
+        async function deleteEnrollment() {
+            const id = document.getElementById('deleteEnrollId').value;
+            
+            const query = `mutation {
+                deleteEnrollment(id: "${id}") { success }
+            }`;
+            
+            const response = await fetch(ENROLLMENTS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('enrollmentsResult').innerHTML = JSON.stringify(result, null, 2);
+            getEnrollments();
+        }
+
+        async function getEnrollments() {
+            const query = `{ enrollments { id studentId courseId status } }`;
+            const response = await fetch(ENROLLMENTS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            const result = await response.json();
+            document.getElementById('enrollmentsResult').innerHTML = JSON.stringify(result, null, 2);
+        }
+    </script>
+</body>
+</html>
